@@ -1,0 +1,12 @@
+[Unit]
+Description=Doorphone manager
+After=multi-user.target
+ 
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/doorphone
+ExecStart=/usr/bin/python /usr/local/bin/doorphone.py
+Restart=on-abort
+ 
+[Install]
+WantedBy=multi-user.target
