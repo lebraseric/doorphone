@@ -64,6 +64,9 @@ class MyCallCallback(pj.CallCallback):
         global acc
         if self.call.info().state == pj.CallState.DISCONNECTED:
             acc.delete()
+    
+    def on_dtmf_digit(self, digits):
+        print "DTMF received, digit=", digits
 
 def call_button_handler(signum, frame):
     global acc
