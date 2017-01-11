@@ -22,6 +22,16 @@ LOG_LEVEL=3
 def log_cb(level, str, len):
     print str,
 
+# Handle TERM signal
+class GracefulKiller:
+    kill_now = False
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self,signum, frame):
+        self.kill_now = True
+
 # Callback to receive events from account
 class MyAccountCallback(pj.AccountCallback):
     sem = None
@@ -45,9 +55,12 @@ class MyCallCallback(pj.CallCallback):
 
     # Notification when call state has changed
     def on_state(self):
+        global acc
         print "Call is ", self.call.info().state_text,
         print "last code =", self.call.info().last_code, 
         print "(" + self.call.info().last_reason + ")"
+        if self.call.info().state == pj.CallState.DISCONNECTED:
+            acc.delete()
         
     # Notification when call's media state has changed.
     def on_media_state(self):
@@ -60,15 +73,10 @@ class MyCallCallback(pj.CallCallback):
             lib.conf_connect(0, call_slot)
             call_start = datetime.datetime.today()
 
-    def on_state(self):
-        global acc
-        if self.call.info().state == pj.CallState.DISCONNECTED:
-            acc.delete()
-    
     def on_dtmf_digit(self, digits):
         print "DTMF received, digit=", digits
 
-def call_button_handler(signum, frame):
+def call_button_handler():
     global acc
     global call
     acc_cb = MyAccountCallback()
@@ -77,6 +85,10 @@ def call_button_handler(signum, frame):
     # Call user
     call = acc.make_call(os.getenv('SIP_CALL_URI'), MyCallCallback())
     
+def signal_handler(signum, frame):
+    if signum == signal.SIGUSR1:
+        call_button_handler()
+
 # Initialize the GPIO module
 gpio.init()
 
@@ -87,8 +99,8 @@ gpio.setcfg(call_button, gpio.INPUT)
 # Enable pull-up resistor
 gpio.pullup(call_button, gpio.PULLUP)
 
-# Turn off led
-gpio.output(led, gpio.LOW)
+# Light up the doorphone
+gpio.output(led, gpio.HIGH)
 
 # Create library instance
 lib = pj.Lib()
@@ -113,31 +125,30 @@ try:
     acc_cfg.auth_cred = [ pj.AuthCred(os.getenv('SIP_REALM', '*'), os.getenv('SIP_USERNAME'), os.getenv('SIP_PASSWORD')) ]
     acc_cfg.reg_timeout = int(os.getenv('SIP_REG_TIMEOUT', '300'))
 
-    # Blink led 3 times to confirm init
-    """
-    for i in range(3):
-        gpio.output(led, gpio.HIGH)
-        sleep(0.3)
-        gpio.output(led, gpio.LOW)
-        sleep(0.3)
-    """
-    gpio.output(led, gpio.HIGH)
-    
-    signal.signal(signal.SIGUSR1, call_button_handler)
+    signal.signal(signal.SIGUSR1, signal_handler)
 
     call_start = None
     call_timeout = datetime.timedelta(seconds=int(os.getenv('CALL_TIMEOUT', '120')))
 
+    killer = GracefulKiller()
     while True:
         state = gpio.input(call_button)
         if not state:
             # Make call
-            call_button_handler(0, None)
+            call_button_handler()
         if call_start <> None:
             if (datetime.datetime.today() - call_start) > call_timeout:
                 call.hangup()
                 call_start = None
+        if killer.kill_now:
+            break
         sleep(0.2)
+
+    gpio.output(led, gpio.LOW)
+    lib.destroy()
+    lib = None
+    print "Doorphone shut down"
+    sys.exit(0)
 
 except pj.Error, e:
     print "Exception: " + str(e)
@@ -145,10 +156,3 @@ except pj.Error, e:
     lib.destroy()
     lib = None
     sys.exit(1)
-
-except KeyboardInterrupt:
-    print "Killed by user"
-    gpio.output(led, gpio.LOW)
-    lib.destroy()
-    lib = None
-    sys.exit(0)
