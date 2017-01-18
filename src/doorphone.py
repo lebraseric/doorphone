@@ -128,34 +128,34 @@ try:
     acc_cfg.auth_cred = [ pj.AuthCred(os.getenv('SIP_REALM', '*'), os.getenv('SIP_USERNAME'), os.getenv('SIP_PASSWORD')) ]
     acc_cfg.reg_timeout = int(os.getenv('SIP_REG_TIMEOUT', '300'))
 
-    signal.signal(signal.SIGUSR1, signal_handler)
-
-    call_start = None
-    call_timeout = datetime.timedelta(seconds=int(os.getenv('CALL_TIMEOUT', '120')))
-    bt_prev_state = 1
-    killer = GracefulKiller()
-    while True:
-        bt_state = gpio.input(call_button)
-        if bt_state != bt_prev_state:
-            bt_prev_state = bt_state
-            if bt_state == 0:
-                # Make call
-                call_button_handler()
-        if call_start <> None and (datetime.datetime.today() - call_start) > call_timeout:
-            call.hangup()
-        if killer.kill_now:
-            break
-        sleep(0.2)
-
-    gpio.output(led, gpio.LOW)
-    lib.destroy()
-    lib = None
-    print "Doorphone shut down"
-    sys.exit(0)
-
 except pj.Error, e:
     print "Exception: " + str(e)
     gpio.output(led, gpio.LOW)
     lib.destroy()
     lib = None
     sys.exit(1)
+
+signal.signal(signal.SIGUSR1, signal_handler)
+
+call_start = None
+call_timeout = datetime.timedelta(seconds=int(os.getenv('CALL_TIMEOUT', '120')))
+bt_prev_state = 1
+killer = GracefulKiller()
+while True:
+    bt_state = gpio.input(call_button)
+    if bt_state != bt_prev_state:
+        bt_prev_state = bt_state
+        if bt_state == 0:
+            # Make call
+            call_button_handler()
+    if call_start <> None and (datetime.datetime.today() - call_start) > call_timeout:
+        call.hangup()
+    if killer.kill_now:
+        break
+    sleep(0.2)
+
+gpio.output(led, gpio.LOW)
+lib.destroy()
+lib = None
+print "Doorphone shut down"
+sys.exit(0)
