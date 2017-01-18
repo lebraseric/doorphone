@@ -76,7 +76,7 @@ class MyCallCallback(pj.CallCallback):
             call_start = datetime.datetime.today()
 
     def on_dtmf_digit(self, digits):
-        print "DTMF received, digit=", digits
+        print "DTMF received, digit=", str(digits)
 
 def call_button_handler():
     global lib
