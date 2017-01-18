@@ -56,11 +56,13 @@ class MyCallCallback(pj.CallCallback):
     # Notification when call state has changed
     def on_state(self):
         global acc
+        global call_start
         print "Call is ", self.call.info().state_text,
         print "last code =", self.call.info().last_code, 
         print "(" + self.call.info().last_reason + ")"
         if self.call.info().state == pj.CallState.DISCONNECTED:
             acc.delete()
+            call_start = None
         
     # Notification when call's media state has changed.
     def on_media_state(self):
@@ -139,10 +141,8 @@ try:
             if bt_state == 0:
                 # Make call
                 call_button_handler()
-        if call_start <> None:
-            if (datetime.datetime.today() - call_start) > call_timeout:
-                call.hangup()
-                call_start = None
+        if call_start <> None and (datetime.datetime.today() - call_start) > call_timeout:
+            call.hangup()
         if killer.kill_now:
             break
         sleep(0.2)
