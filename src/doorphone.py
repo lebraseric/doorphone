@@ -77,6 +77,7 @@ class MyCallCallback(pj.CallCallback):
         print "DTMF received, digit=", digits
 
 def call_button_handler():
+    global lib
     global acc
     global call
     acc_cb = MyAccountCallback()
@@ -129,13 +130,15 @@ try:
 
     call_start = None
     call_timeout = datetime.timedelta(seconds=int(os.getenv('CALL_TIMEOUT', '120')))
-
+    bt_prev_state = 1
     killer = GracefulKiller()
     while True:
-        state = gpio.input(call_button)
-        if not state:
-            # Make call
-            call_button_handler()
+        bt_state = gpio.input(call_button)
+        if bt_state != bt_prev_state:
+            bt_prev_state = bt_state
+            if bt_state == 0:
+                # Make call
+                call_button_handler()
         if call_start <> None:
             if (datetime.datetime.today() - call_start) > call_timeout:
                 call.hangup()
