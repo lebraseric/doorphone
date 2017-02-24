@@ -57,12 +57,14 @@ class MyCallCallback(pj.CallCallback):
     def on_state(self):
         global acc
         global call_start
+        global call_nb
         print "Call is ", self.call.info().state_text,
         print "last code =", self.call.info().last_code, 
         print "(" + self.call.info().last_reason + ")"
         if self.call.info().state == pj.CallState.DISCONNECTED:
             acc.delete()
             call_start = None
+            call_nb -= 1
         
     # Notification when call's media state has changed.
     def on_media_state(self):
@@ -82,11 +84,14 @@ def call_button_handler():
     global lib
     global acc
     global call
-    acc_cb = MyAccountCallback()
-    acc = lib.create_account(acc_cfg, cb=acc_cb)
-    acc_cb.wait()
-    # Call user
-    call = acc.make_call(os.getenv('SIP_CALL_URI'), MyCallCallback())
+    global call_nb
+    if call_nb == 0:
+        call_nb += 1
+        acc_cb = MyAccountCallback()
+        acc = lib.create_account(acc_cfg, cb=acc_cb)
+        acc_cb.wait()
+        # Call user
+        call = acc.make_call(os.getenv('SIP_DEST_URI'), MyCallCallback())
     
 def signal_handler(signum, frame):
     if signum == signal.SIGUSR1:
@@ -135,10 +140,12 @@ except pj.Error, e:
     lib = None
     sys.exit(1)
 
+# kill -SIGUSR1 to simulate call button pressed
 signal.signal(signal.SIGUSR1, signal_handler)
 
 call_start = None
 call_timeout = datetime.timedelta(seconds=int(os.getenv('CALL_TIMEOUT', '120')))
+call_nb = 0
 bt_prev_state = 1
 killer = GracefulKiller()
 while True:

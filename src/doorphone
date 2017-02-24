@@ -17,8 +17,11 @@
 # SIP_REG_TIMEOUT=1800
 
 # Remote SIP URI
-# SIP_CALL_URI="sip:111111111@provider.net;user=phone"
+# SIP_DEST_URI="sip:111111111@provider.net;user=phone"
 
 # Call timeout in seconds. The call automatically hangs up after expiration.
 # Default value is 120
 # CALL_TIMEOUT=120
+
+# Transport type to use (UDP or TCP). Default is UDP
+# SIP_TRANSPORT=UDP
