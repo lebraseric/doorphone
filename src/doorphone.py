@@ -13,7 +13,11 @@ from time import sleep
 if not os.getegid() == 0:
     sys.exit('Script must be run as root')
 
-led = port.PA7
+led_yellow = port.PA7
+led_red = port.PA11
+led_green = port.PA12
+relay_0 = port.PA15
+relay_1 = port.PA16
 call_button = port.PA13
 
 LOG_LEVEL=3
@@ -78,7 +82,19 @@ class MyCallCallback(pj.CallCallback):
             call_start = datetime.datetime.today()
 
     def on_dtmf_digit(self, digits):
+        global relay_0
+        global relay_1
         print "DTMF received, digit=", str(digits)
+        if digits == "#":
+            relay = relay_0
+        elif digits == "*":
+            relay = relay_1
+        else:
+            return
+        # Ouverture portail ou gache : fermer le contact pendant 1 s
+        gpio.output(relay, gpio.LOW)
+        sleep(1)
+        gpio.output(relay, gpio.HIGH)
 
 def call_button_handler():
     global lib
@@ -101,14 +117,26 @@ def signal_handler(signum, frame):
 gpio.init()
 
 # Setup ports
-gpio.setcfg(led, gpio.OUTPUT)
+gpio.setcfg(led_yellow, gpio.OUTPUT)
+gpio.setcfg(led_red, gpio.OUTPUT)
+gpio.setcfg(led_green, gpio.OUTPUT)
+gpio.setcfg(relay_0, gpio.OUTPUT)
+gpio.setcfg(relay_1, gpio.OUTPUT)
 gpio.setcfg(call_button, gpio.INPUT)
 
 # Enable pull-up resistor
 gpio.pullup(call_button, gpio.PULLUP)
 
+# Light off bicolor led
+gpio.output(led_red, gpio.HIGH)
+gpio.output(led_green, gpio.HIGH)
+
 # Light up the doorphone
-gpio.output(led, gpio.HIGH)
+gpio.output(led_yellow, gpio.HIGH)
+
+# Initialize relays
+gpio.output(relay_0, gpio.HIGH)
+gpio.output(relay_1, gpio.HIGH)
 
 # Create library instance
 lib = pj.Lib()
@@ -135,7 +163,7 @@ try:
 
 except pj.Error, e:
     print "Exception: " + str(e)
-    gpio.output(led, gpio.LOW)
+    gpio.output(led_yellow, gpio.LOW)
     lib.destroy()
     lib = None
     sys.exit(1)
@@ -161,7 +189,7 @@ while True:
         break
     sleep(0.2)
 
-gpio.output(led, gpio.LOW)
+gpio.output(led_yellow, gpio.LOW)
 lib.destroy()
 lib = None
 print "Doorphone shut down"
