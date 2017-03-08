@@ -92,9 +92,9 @@ class MyCallCallback(pj.CallCallback):
         else:
             return
         # Ouverture portail ou gache : fermer le contact pendant 1 s
-        gpio.output(relay, gpio.LOW)
-        sleep(1)
         gpio.output(relay, gpio.HIGH)
+        sleep(1)
+        gpio.output(relay, gpio.LOW)
 
 def call_button_handler():
     global lib
@@ -135,8 +135,8 @@ gpio.output(led_green, gpio.HIGH)
 gpio.output(led_yellow, gpio.HIGH)
 
 # Initialize relays
-gpio.output(relay_0, gpio.HIGH)
-gpio.output(relay_1, gpio.HIGH)
+gpio.output(relay_0, gpio.LOW)
+gpio.output(relay_1, gpio.LOW)
 
 # Create library instance
 lib = pj.Lib()
