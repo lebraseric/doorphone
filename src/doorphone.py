@@ -26,6 +26,12 @@ LOG_LEVEL=3
 def log_cb(level, str, len):
     print str,
 
+def action_relay(relay):
+    # Ouverture portail ou gache : fermer le contact pendant 1 s
+    gpio.output(relay, gpio.HIGH)
+    sleep(1)
+    gpio.output(relay, gpio.LOW)
+
 # Handle TERM signal
 class GracefulKiller:
     kill_now = False
@@ -91,10 +97,7 @@ class MyCallCallback(pj.CallCallback):
             relay = relay_1
         else:
             return
-        # Ouverture portail ou gache : fermer le contact pendant 1 s
-        gpio.output(relay, gpio.HIGH)
-        sleep(1)
-        gpio.output(relay, gpio.LOW)
+        action_relay(relay)
 
 def call_button_handler():
     global lib
@@ -112,6 +115,8 @@ def call_button_handler():
 def signal_handler(signum, frame):
     if signum == signal.SIGUSR1:
         call_button_handler()
+    if signum == signal.SIGUSR2:
+        action_relay(relay_0)
 
 # Initialize the GPIO module
 gpio.init()
@@ -170,6 +175,7 @@ except pj.Error, e:
 
 # kill -SIGUSR1 to simulate call button pressed
 signal.signal(signal.SIGUSR1, signal_handler)
+signal.signal(signal.SIGUSR2, signal_handler)
 
 call_start = None
 call_timeout = datetime.timedelta(seconds=int(os.getenv('CALL_TIMEOUT', '120')))
